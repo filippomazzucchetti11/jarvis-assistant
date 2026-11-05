@@ -65,7 +65,7 @@ async function answer(q){
 
   if(t.includes('attività'))
     return 'Attività ancora da completare: '+tasks.filter(x=>!x.done).length+'.';
-=
+
   if(t.includes('comandi')||t.includes('aiuto'))
     return 'Comandi: che ora è, che data è, quante attività ho, cerca [argomento].';
 
