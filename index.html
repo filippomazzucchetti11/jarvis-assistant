@@ -8,7 +8,18 @@
 <section class="panel"><h2>MODULI FUTURI</h2><div class="task"><span>◈ Comandi vocali avanzati</span></div><div class="task"><span>◈ Backend AI sicuro</span></div><div class="task"><span>◈ Calendario e notifiche</span></div><div class="task"><span>◈ Domotica autorizzata</span></div><div class="task"><span>◈ Ricerca web e strumenti</span></div><p class="tiny">Sono elementi della roadmap, non funzioni già attive.</p></section></div><div class="footer">JARVIS MOBILE CONSOLE · PROTOTIPO 0.1</div></main>
 <script>
 const $=s=>document.querySelector(s),load=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}},save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));$('#storage').textContent='attiva'}catch{$('#storage').textContent='non disponibile'}};
-let notes=load('j_notes',[]),tasks=load('j_tasks',[]),msgs=load('j_msgs',[]);
+function updateConnection(){
+  const e=$('#connectionStatus');
+  if(!e)return;
+  const online=navigator.onLine;
+  e.textContent=online?'● ONLINE':'● OFFLINE';
+  e.style.color=online?'#9fffd5':'#ffb4a2';
+  e.style.borderColor=online?'#236b61':'#8a3d3d';
+}
+
+window.addEventListener('online',updateConnection);
+window.addEventListener('offline',updateConnection);
+updateConnection();let notes=load('j_notes',[]),tasks=load('j_tasks',[]),msgs=load('j_msgs',[]);
 function tick(){$('#clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}tick();setInterval(tick,15000)
 function say(text,who='assistant'){msgs.push({text,who});msgs=msgs.slice(-70);save('j_msgs',msgs);drawChat();if(who==='assistant'&&'speechSynthesis'in window){speechSynthesis.cancel();const voce=new SpeechSynthesisUtterance(text);voce.lang='it-IT';voce.rate=1;speechSynthesis.speak(voce)}}
 function drawChat(){const e=$('#chat');e.innerHTML='';msgs.forEach(m=>{const d=document.createElement('div');d.className='msg '+m.who;d.textContent=m.text;e.append(d)});e.scrollTop=e.scrollHeight}
