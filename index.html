@@ -23,25 +23,36 @@ updateConnection();let notes=load('j_notes',[]),tasks=load('j_tasks',[]),msgs=lo
 function tick(){$('#clock').textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}tick();setInterval(tick,15000)
 function say(text,who='assistant'){msgs.push({text,who});msgs=msgs.slice(-70);save('j_msgs',msgs);drawChat();if(who==='assistant'&&'speechSynthesis'in window){speechSynthesis.cancel();const voce=new SpeechSynthesisUtterance(text);voce.lang='it-IT';voce.rate=1;speechSynthesis.speak(voce)}}
 function drawChat(){const e=$('#chat');e.innerHTML='';msgs.forEach(m=>{const d=document.createElement('div');d.className='msg '+m.who;d.textContent=m.text;e.append(d)});e.scrollTop=e.scrollHeight}
-function answer(q){
+async function answer(q){
   const testo=q.trim();
   const t=testo.toLowerCase();
 
   if(/^(cerca|ricerca|google)\b/.test(t)){
-    if(!navigator.onLine)
-      return 'Signore, Internet non è disponibile. Sono in modalità OFFLINE.';
+  const query=testo.replace(/^(cerca su google|cerca|ricerca|google)\s*/i,'').trim();
 
-    const query=testo.replace(/^(cerca su google|cerca|ricerca|google)\s*/i,'').trim();
+  if(!query)return 'Signore, cosa desidera cercare?';
 
-    if(!query)return 'Signore, cosa desidera cercare?';
+  if(!navigator.onLine)
+    return 'Signore, Internet non è disponibile.';
 
-    window.open(
-      'https://www.google.com/search?q='+encodeURIComponent(query),
-      '_blank'
-    );
+  try{
+    const url='https://it.wikipedia.org/w/api.php?action=query&list=search&srsearch='+encodeURIComponent(query)+'&format=json&origin=*';
+    const risposta=await fetch(url);
+    const dati=await risposta.json();
 
-    return 'Ho aperto Google per cercare: '+query;
+    if(!dati.query.search.length)
+      return 'Non ho trovato risultati su Wikipedia.';
+
+    const pagina=dati.query.search[0];
+    const dettaglio=await fetch('https://it.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&format=json&origin=*&pageids='+pagina.pageid);
+    const contenuto=await dettaglio.json();
+    const riassunto=contenuto.query.pages[pagina.pageid].extract;
+
+    return 'Ho trovato: '+pagina.title+'\n\n'+riassunto.slice(0,1000);
+  }catch(error){
+    return 'Signore, non riesco a completare la ricerca. Riprovi tra poco.';
   }
+}
 
   if(/ciao|salve|buongiorno/.test(t))
     return 'Buongiorno, Signore. JARVIS è operativo.';
@@ -54,13 +65,13 @@ function answer(q){
 
   if(t.includes('attività'))
     return 'Attività ancora da completare: '+tasks.filter(x=>!x.done).length+'.';
-
+=
   if(t.includes('comandi')||t.includes('aiuto'))
     return 'Comandi: che ora è, che data è, quante attività ho, cerca [argomento].';
 
   return 'Ricevuto, Signore. Sono in modalità locale. Posso eseguire i miei comandi disponibili.';
-}{q=q.toLowerCase();if(/ciao|salve|buongiorno/.test(q))return'Buongiorno, Signore. JARVIS è operativo in modalità locale.';if(q.includes('ora'))return'L’ora locale è '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})+'.';if(q.includes('data'))return'Oggi è '+new Date().toLocaleDateString('it-IT',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'.';if(q.includes('attività'))return'Attività ancora da completare: '+tasks.filter(x=>!x.done).length+'.';if(q.includes('comandi')||q.includes('aiuto'))return'Comandi: “che ora è?”, “che data è?”, “quante attività ho?”. Note e attività si gestiscono nei pannelli. L’AI avanzata non è ancora collegata.';return'Ricevuto. Questa versione risponde a pochi comandi locali dimostrativi. Il prossimo passo è collegare un modello AI tramite backend sicuro.'}
-$('#chatForm').onsubmit=e=>{e.preventDefault();let q=$('#message').value.trim();if(q){say(q,'user');$('#message').value='';say(answer(q))}};
+}
+$('#chatForm').onsubmit=async e=>{e.preventDefault();let q=$('#message').value.trim();if(q){say(q,'user');$('#message').value='';say(await answer(q))}};
 $('#clear').onclick=()=>{msgs=[];save('j_msgs',msgs);drawChat()};
 function drawNotes(){let e=$('#notes');e.innerHTML='';notes.forEach((n,i)=>{let r=document.createElement('div');r.className='task';let s=document.createElement('span');s.textContent=n;let b=document.createElement('button');b.textContent='×';b.onclick=()=>{notes.splice(i,1);save('j_notes',notes);drawNotes()};r.append(s,b);e.append(r)});$('#noteCount').textContent=notes.length}
 $('#noteForm').onsubmit=e=>{e.preventDefault();let v=$('#noteText').value.trim();if(v){notes.unshift(v);save('j_notes',notes);$('#noteText').value='';drawNotes()}};
